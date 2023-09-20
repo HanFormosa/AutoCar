@@ -5,6 +5,7 @@
 //    B = 後
 
 #include <Servo.h> 
+#include <avr/sleep.h>
 int pinLB=7;     // 定義7腳位 左後
 int pinLF=8;     // 定義8腳位 左前
 
@@ -30,6 +31,14 @@ int Rgo = 6;         // 右轉
 int Lgo = 4;         // 左轉
 int Bgo = 2;         // 倒車
 
+int powerstatus = 0;
+int uptime_cnt = 0;
+int uptime_cnt_max = 30;//seconds
+int interval = 1000; //1000ms = 1s
+int interruptPin = 2;
+
+int ledPin = 13;
+
 void setup()
  {
   Serial.begin(9600);     // 定義馬達輸出腳位 
@@ -45,6 +54,9 @@ void setup()
 
   analogWrite(pinEnA_Speed,100);//输入模拟值进行设定速度
   analogWrite(pinEnB_Speed,100);
+
+  pinMode (interruptPin, INPUT_PULLUP);
+  pinMode (ledPin, OUTPUT);
  }
 void advance(int a)     // 前進
     {
@@ -191,35 +203,98 @@ void ask_pin_R()   // 量出右邊距離
       Serial.println(Rdistance);         //顯示距離
       Rspeedd = Rdistance;              // 將距離 讀入Rspeedd(右速)
     }  
-    
+
+void sleepNow ()
+{
+  powerstatus = 0;
+  //turn off ledpin
+  digitalWrite(ledPin, LOW);
+  cli();                                                                       //disable interrupts
+  sleep_enable ();                                                      // enables the sleep bit in the mcucr register
+  attachInterrupt (0, Wakeup_Routine, RISING);          // wake up on RISING level on D2
+  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+  ADCSRA = 0;                                                           //disable the ADC
+  sleep_bod_disable();                                                //save power                                              
+  sei();                                                                      //enable interrupts
+  sleep_cpu ();                                                           // here the device is put to sleep
+}  // end of sleepNow
+
+//Wakeup routine, triggered pin 2
+void Wakeup_Routine()
+{
+  sleep_disable();
+  detachInterrupt(0);
+  powerstatus =1;
+}
 void loop()
  {
-    myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
-    detection();        //測量角度 並且判斷要往哪一方向移動
-   if(directionn == 2)  //假如directionn(方向) = 2(倒車)             
-   {
-     back(8);                    //  倒退(車)
-     turnL(2);                   //些微向左方移動(防止卡在死巷裡)
-     Serial.println(" Reverse ");   //顯示方向(倒退)
-   }
-   if(directionn == 6)           //假如directionn(方向) = 6(右轉)    
-   {
-     back(1); 
-     turnR(6);                   // 右轉
-     Serial.println(" Right ");    //顯示方向(左轉)
-   }
-   if(directionn == 4)          //假如directionn(方向) = 4(左轉)    
-   {  
-     back(1);      
-     turnL(6);                  // 左轉
-     Serial.println(" Left ");     //顯示方向(右轉)   
-   }  
-   if(directionn == 8)          //假如directionn(方向) = 8(前進)      
-   { 
-    advance(1);                 // 正常前進  
-    Serial.print(" Advance ");   //顯示方向(前進)
-    Serial.println("   ");    
-   }
+    //turn on ledpin
+    digitalWrite(ledPin, HIGH);
+
+    if(!powerstatus){
+      sleepNow();
+      stopp(1);               // 清除輸出資料 
+
+    }else{
+      myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
+      detection();        //測量角度 並且判斷要往哪一方向移動
+      
+      if(directionn == 2)  //假如directionn(方向) = 2(倒車)             
+      {
+        back(8);                    //  倒退(車)
+        turnL(2);                   //些微向左方移動(防止卡在死巷裡)
+        Serial.println(" Reverse ");   //顯示方向(倒退)
+      }
+      if(directionn == 6)           //假如directionn(方向) = 6(右轉)    
+      {
+        back(1); 
+        turnR(6);                   // 右轉
+        Serial.println(" Right ");    //顯示方向(左轉)
+      }
+      if(directionn == 4)          //假如directionn(方向) = 4(左轉)    
+      {  
+        back(1);      
+        turnL(6);                  // 左轉
+        Serial.println(" Left ");     //顯示方向(右轉)   
+      }  
+      if(directionn == 8)          //假如directionn(方向) = 8(前進)      
+      { 
+        advance(1);                 // 正常前進  
+        Serial.print(" Advance ");   //顯示方向(前進)
+        Serial.println("   ");    
+      }
+
+
+      static uint32_t nextTime;
+
+      // check if it's time
+      if (millis() - nextTime >= interval)
+      {
+        // do your action here
+        //increment uptime counter
+        uptime_cnt++;
+        Serial.print("uptime_cnt: ");
+        Serial.println(uptime_cnt);
+
+        // update next time
+        nextTime += interval;
+      }
+
+      //check if uptime counter is greater than max
+      if (uptime_cnt >= uptime_cnt_max)
+      {
+        //reset uptime counter
+        uptime_cnt = 0;
+
+        //do your action here
+        Serial.println("reset uptime_cnt.. go to sleep");
+        //enter sleep
+        powerstatus =0;
+
+      }
+
+    }
+    
  }
 
 
