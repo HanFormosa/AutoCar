@@ -31,6 +31,9 @@ int Rgo = 6;         // 右轉
 int Lgo = 4;         // 左轉
 int Bgo = 2;         // 倒車
 
+int buttonState = 0;
+int lastButtonState = 0;
+
 int powerstatus = 0;
 int uptime_cnt = 0;
 int uptime_cnt_max = 30;//seconds
@@ -57,6 +60,7 @@ void setup()
 
   pinMode (interruptPin, INPUT_PULLUP);
   pinMode (ledPin, OUTPUT);
+
  }
 void advance(int a)     // 前進
     {
@@ -210,20 +214,27 @@ void sleepNow ()
   //turn off ledpin
   digitalWrite(ledPin, LOW);
   cli();                                                                       //disable interrupts
-  sleep_enable ();                                                      // enables the sleep bit in the mcucr register
-  attachInterrupt (0, Wakeup_Routine, RISING);          // wake up on RISING level on D2
+  sleep_enable ();                                                     // enables the sleep bit in the mcucr register
+  attachInterrupt (0, Wakeup_Routine, FALLING);          // wake up on RISING level on D2
   set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
   ADCSRA = 0;                                                           //disable the ADC
   sleep_bod_disable();                                                //save power                                              
   sei();                                                                      //enable interrupts
-  sleep_cpu ();                                                           // here the device is put to sleep
+  // sleep_cpu ();                                                           // here the device is put to sleep
+  
+  sleep_mode();
+  sleep_disable();
+  detachInterrupt(0);
+  
 }  // end of sleepNow
 
 //Wakeup routine, triggered pin 2
 void Wakeup_Routine()
 {
-  sleep_disable();
-  detachInterrupt(0);
+   //Internal Reset
+  // asm volatile ("  jmp 0");
+
+  noInterrupts();
   powerstatus =1;
 }
 void loop()
@@ -232,6 +243,7 @@ void loop()
     digitalWrite(ledPin, HIGH);
 
     if(!powerstatus){
+      
       sleepNow();
       stopp(1);               // 清除輸出資料 
 
@@ -291,6 +303,26 @@ void loop()
         //enter sleep
         powerstatus =0;
 
+      }
+
+      buttonState = digitalRead(interruptPin);
+      Serial.println(buttonState);
+      // compare the buttonState to its previous state
+      if (buttonState != lastButtonState) {
+        // if the state has changed, increment the counter
+        if (buttonState == LOW) {
+        //   // if the current state is HIGH then the button went from off to on:
+        //   buttonPushCounter++;
+          Serial.println("button is pressed. sleeping...");
+          //enter sleep
+          delay(300);
+          powerstatus = 0;
+          
+        }
+          
+          // Serial.print("number of button pushes: ");
+          // Serial.println(buttonPushCounter);
+          lastButtonState = buttonState;
       }
 
     }
