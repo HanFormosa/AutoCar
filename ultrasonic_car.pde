@@ -4,7 +4,7 @@
 //    F = 前
 //    B = 後
 
-#include <Servo.h> 
+// #include <Servo.h> 
 #include <avr/sleep.h>
 int pinLB=7;     // 定義7腳位 左後
 int pinLF=8;     // 定義8腳位 左前
@@ -22,7 +22,7 @@ int Fspeedd = 0;      // 前速
 int Rspeedd = 0;      // 右速
 int Lspeedd = 0;      // 左速
 int directionn = 0;   // 前=8 後=2 左=4 右=6 
-Servo myservo;        // 設 myservo
+// Servo myservo;        // 設 myservo
 int pinservo = 5;
 int delay_time = 250; // 伺服馬達轉向後的穩定時間
 
@@ -57,8 +57,10 @@ void setup()
   pinMode(inputPin, INPUT);    // 定義超音波輸入腳位
   pinMode(outputPin, OUTPUT);  // 定義超音波輸出腳位   
 
-  myservo.attach(pinservo);    // 定義伺服馬達輸出第5腳位(PWM)
+  // myservo.attach(pinservo);    // 定義伺服馬達輸出第5腳位(PWM)
 
+  pinMode(pinEnA_Speed,OUTPUT);//定义pinEnA_Speed为输出模式
+  pinMode(pinEnB_Speed,OUTPUT);//定义pinEnB_Speed为输出模式
   analogWrite(pinEnA_Speed,100);//输入模拟值进行设定速度
   analogWrite(pinEnB_Speed,100);
 
@@ -173,7 +175,7 @@ void detection()        //測量3個角度(0.90.179)
     }    
 void ask_pin_F()   // 量出前方距離 
     {
-      myservo.write(90);
+      // myservo.write(90);
       digitalWrite(outputPin, LOW);   // 讓超聲波發射低電壓2μs
       delayMicroseconds(2);
       digitalWrite(outputPin, HIGH);  // 讓超聲波發射高電壓10μs，這裡至少是10μs
@@ -187,7 +189,7 @@ void ask_pin_F()   // 量出前方距離
     }  
  void ask_pin_L()   // 量出左邊距離 
     {
-      myservo.write(5);
+      // myservo.write(5);
       delay(delay_time);
       digitalWrite(outputPin, LOW);   // 讓超聲波發射低電壓2μs
       delayMicroseconds(2);
@@ -202,7 +204,7 @@ void ask_pin_F()   // 量出前方距離
     }  
 void ask_pin_R()   // 量出右邊距離 
     {
-      myservo.write(177);
+      // myservo.write(177);
       delay(delay_time);
       digitalWrite(outputPin, LOW);   // 讓超聲波發射低電壓2μs
       delayMicroseconds(2);
@@ -223,18 +225,25 @@ void sleepNow ()
   digitalWrite(ledPin, LOW);
 
   toneDown();
-  cli();                                                                       //disable interrupts
-  sleep_enable ();                                                     // enables the sleep bit in the mcucr register
-  attachInterrupt (0, Wakeup_Routine, FALLING);          // wake up on RISING level on D2
-  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+
   ADCSRA = 0;                                                           //disable the ADC
-  sleep_bod_disable();                                                //save power                                              
-  sei();                                                                      //enable interrupts
-  // sleep_cpu ();                                                           // here the device is put to sleep
-  
-  sleep_mode();
-  sleep_disable();
-  detachInterrupt(0);
+  set_sleep_mode (SLEEP_MODE_PWR_DOWN);  
+  sleep_enable ();                                                     // enables the sleep bit in the mcucr register
+  noInterrupts();
+  attachInterrupt (0, Wakeup_Routine, FALLING);          // wake up on RISING level on D2
+
+  EIFR = bit (INTF0);  // clear flag for interrupt 0                                                                  
+
+  // turn off brown-out enable in software
+  // BODS must be set to one and BODSE must be set to zero within four clock cycles
+  MCUCR = bit (BODS) | bit (BODSE);
+  // The BODS bit is automatically cleared after three clock cycles
+  MCUCR = bit (BODS); 
+  // We are guaranteed that the sleep_cpu call will be done
+  // as the processor executes the next instruction after
+  // interrupts are turned on.
+  interrupts ();  // one cycle
+  sleep_cpu ();   // one cycle
   
 }  // end of sleepNow
 
@@ -244,9 +253,14 @@ void Wakeup_Routine()
    //Internal Reset
   // asm volatile ("  jmp 0");
 
-  noInterrupts();
+  
   powerstatus =1;
   wakeupflag = 1;
+
+  // cancel sleep as a precaution
+  sleep_disable();
+  // precautionary while we do other stuff
+  detachInterrupt (0);
 }
 
 void toneUp(){
@@ -282,7 +296,7 @@ void loop()
       stopp(1);               // 清除輸出資料 
 
     }else{
-      myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
+      // myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
       detection();        //測量角度 並且判斷要往哪一方向移動
       if(wakeupflag){
         toneUp();
