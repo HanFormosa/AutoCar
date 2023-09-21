@@ -6,6 +6,7 @@
 
 // #include <Servo.h> 
 #include <avr/sleep.h>
+#include <avr/power.h>
 int pinLB=7;     // 定義7腳位 左後
 int pinLF=8;     // 定義8腳位 左前
 
@@ -36,7 +37,7 @@ int lastButtonState = 0;
 
 int powerstatus = 0;
 int uptime_cnt = 0;
-int uptime_cnt_max = 30;//seconds
+int uptime_cnt_max = 120;//seconds
 int interval = 1000; //1000ms = 1s
 int interruptPin = 2;
 
@@ -61,8 +62,8 @@ void setup()
 
   pinMode(pinEnA_Speed,OUTPUT);//定义pinEnA_Speed为输出模式
   pinMode(pinEnB_Speed,OUTPUT);//定义pinEnB_Speed为输出模式
-  analogWrite(pinEnA_Speed,100);//输入模拟值进行设定速度
-  analogWrite(pinEnB_Speed,100);
+  analogWrite(pinEnA_Speed,125);//输入模拟值进行设定速度
+  analogWrite(pinEnB_Speed,125);
 
   pinMode (interruptPin, INPUT_PULLUP);
   pinMode (ledPin, OUTPUT);
@@ -261,6 +262,7 @@ void Wakeup_Routine()
   sleep_disable();
   // precautionary while we do other stuff
   detachInterrupt (0);
+
 }
 
 void toneUp(){
@@ -303,6 +305,12 @@ void loop()
         wakeupflag = 0;
         Serial.print("wakeupflag:" );   
         Serial.println(wakeupflag);
+        
+        power_all_enable();   // power everything back on
+        pinMode(pinEnA_Speed,OUTPUT);//定义pinEnA_Speed为输出模式
+        pinMode(pinEnB_Speed,OUTPUT);//定义pinEnB_Speed为输出模式
+        analogWrite(pinEnA_Speed,125);//输入模拟值进行设定速度
+        analogWrite(pinEnB_Speed,125);
       }
       if(directionn == 2)  //假如directionn(方向) = 2(倒車)             
       {
