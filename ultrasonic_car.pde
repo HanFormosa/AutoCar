@@ -42,6 +42,10 @@ int interruptPin = 2;
 
 int ledPin = 13;
 
+int buzzerPin = 6;
+
+static int wakeupflag = 0;
+
 void setup()
  {
   Serial.begin(9600);     // 定義馬達輸出腳位 
@@ -60,6 +64,10 @@ void setup()
 
   pinMode (interruptPin, INPUT_PULLUP);
   pinMode (ledPin, OUTPUT);
+
+  pinMode (buzzerPin, OUTPUT);
+  analogWrite(buzzerPin, 0);
+  
 
  }
 void advance(int a)     // 前進
@@ -213,6 +221,8 @@ void sleepNow ()
   powerstatus = 0;
   //turn off ledpin
   digitalWrite(ledPin, LOW);
+
+  toneDown();
   cli();                                                                       //disable interrupts
   sleep_enable ();                                                     // enables the sleep bit in the mcucr register
   attachInterrupt (0, Wakeup_Routine, FALLING);          // wake up on RISING level on D2
@@ -236,12 +246,36 @@ void Wakeup_Routine()
 
   noInterrupts();
   powerstatus =1;
+  wakeupflag = 1;
 }
+
+void toneUp(){
+  tone(buzzerPin, 261);
+  delay(100);
+  noTone(buzzerPin);
+  delay(100);
+  tone(buzzerPin, 396);
+  delay(100);
+  noTone(buzzerPin);
+
+
+}
+
+void toneDown(){
+  tone(buzzerPin, 396);
+  delay(100);
+  noTone(buzzerPin);
+  delay(100);
+  tone(buzzerPin, 261);
+  delay(100);
+  noTone(buzzerPin);
+  
+}
+
 void loop()
  {
     //turn on ledpin
     digitalWrite(ledPin, HIGH);
-
     if(!powerstatus){
       
       sleepNow();
@@ -250,7 +284,12 @@ void loop()
     }else{
       myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
       detection();        //測量角度 並且判斷要往哪一方向移動
-      
+      if(wakeupflag){
+        toneUp();
+        wakeupflag = 0;
+        Serial.print("wakeupflag:" );   
+        Serial.println(wakeupflag);
+      }
       if(directionn == 2)  //假如directionn(方向) = 2(倒車)             
       {
         back(8);                    //  倒退(車)
