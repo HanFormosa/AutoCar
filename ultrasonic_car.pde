@@ -7,6 +7,7 @@
 // #include <Servo.h> 
 #include <avr/sleep.h>
 #include <avr/power.h>
+#include <Adafruit_NeoPixel.h>
 int pinLB=7;     // 定義7腳位 左後
 int pinLF=8;     // 定義8腳位 左前
 
@@ -24,7 +25,7 @@ int Rspeedd = 0;      // 右速
 int Lspeedd = 0;      // 左速
 int directionn = 0;   // 前=8 後=2 左=4 右=6 
 // Servo myservo;        // 設 myservo
-int pinservo = 5;
+int pinLED_circle = 5;
 int delay_time = 250; // 伺服馬達轉向後的穩定時間
 
 int Fgo = 8;         // 前進
@@ -47,6 +48,9 @@ int buzzerPin = 6;
 
 static int wakeupflag = 0;
 
+
+#define NUMPIXELS 16 // 數量(可更改)
+Adafruit_NeoPixel pixels( NUMPIXELS, pinLED_circle ); //設定腳位及數量(不可更改)
 void setup()
  {
   Serial.begin(9600);     // 定義馬達輸出腳位 
@@ -70,6 +74,9 @@ void setup()
 
   pinMode (buzzerPin, OUTPUT);
   analogWrite(buzzerPin, 0);
+
+  pixels.begin(); //啟用pixels服務
+
   
 
  }
@@ -288,18 +295,55 @@ void toneDown(){
   
 }
 
+void light_task(){
+  static uint32_t tick,j=0;
+  static char up_down_flag =0; //0 means up, 1 means down
+  int R,G,B;
+  if (millis() - tick >= 5)
+  {
+      
+    for(int i=0; i<NUMPIXELS; i++){ //設定「每一顆」燈的顏色
+      R = random(0,255);
+      G = random(0,255);
+      B = random(0,255);
+			pixels.setPixelColor(i, pixels.Color( R, G, B )); //設定燈的顏色
+		}
+    if(up_down_flag == 0){
+      j = j+2;
+      if(j>=50){
+        up_down_flag = 1;
+      }
+    }else{
+      j = j -2;
+      if(j<=0){
+        j=0;
+        up_down_flag = 0;
+      }
+    }
+      
+    pixels.setBrightness(j); //brightness
+		pixels.show();
+
+    // update next time
+    tick = millis();
+  
+  }
+}
+
 void loop()
  {
     //turn on ledpin
     digitalWrite(ledPin, HIGH);
     if(!powerstatus){
-      
+      pixels.setBrightness(0); //brightness
+		  pixels.show();
       sleepNow();
       stopp(1);               // 清除輸出資料 
 
     }else{
       // myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
       detection();        //測量角度 並且判斷要往哪一方向移動
+      light_task();
       if(wakeupflag){
         toneUp();
         wakeupflag = 0;
