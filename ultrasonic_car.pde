@@ -299,7 +299,7 @@ void light_task(){
   static uint32_t tick,j=0;
   static char up_down_flag =0; //0 means up, 1 means down
   int R,G,B;
-  if (millis() - tick >= 5)
+  if (millis() - tick >= 2)
   {
       
     for(int i=0; i<NUMPIXELS; i++){ //設定「每一顆」燈的顏色
@@ -330,6 +330,42 @@ void light_task(){
   }
 }
 
+void light_task2(){
+  static uint32_t tick,i=0,j=0;
+  int R,G,B;
+  static char change_color_flag =1; //1 means change color
+  static char up_down_flag =0; //0 means up, 1 means down
+  if (millis() - tick >= 5)
+  {
+      if(change_color_flag){
+        R = random(0,255);
+        G = random(0,255);
+        B = random(0,255);
+        change_color_flag = 0;
+      }
+      pixels.setPixelColor(i, pixels.Color( R, G, B )); //設定燈的顏色
+
+      i++;
+      if (i >= NUMPIXELS){
+        i=0;
+        change_color_flag = 1;
+      }
+      if(up_down_flag == 0){
+        j = j+2;
+        if(j>=50){
+          up_down_flag = 1;
+        }
+      }else{
+        j = j -2;
+        if(j<=0){
+          j=0;
+          up_down_flag = 0;
+        }
+      }
+    pixels.setBrightness(j); //brightness
+    pixels.show();
+  }
+}
 void loop()
  {
     //turn on ledpin
@@ -343,7 +379,7 @@ void loop()
     }else{
       // myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
       detection();        //測量角度 並且判斷要往哪一方向移動
-      light_task();
+      light_task2();
       if(wakeupflag){
         toneUp();
         wakeupflag = 0;
