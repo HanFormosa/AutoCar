@@ -43,6 +43,7 @@ int interval = 1000; //1000ms = 1s
 int interruptPin = 2;
 
 int ledPin = 13;
+int ledPin2 = 12;
 
 int buzzerPin = 6;
 
@@ -71,6 +72,7 @@ void setup()
 
   pinMode (interruptPin, INPUT_PULLUP);
   pinMode (ledPin, OUTPUT);
+  pinMode (ledPin2, OUTPUT);
 
   pinMode (buzzerPin, OUTPUT);
   analogWrite(buzzerPin, 0);
@@ -231,7 +233,7 @@ void sleepNow ()
   powerstatus = 0;
   //turn off ledpin
   digitalWrite(ledPin, LOW);
-
+  digitalWrite(ledPin2, LOW);
   toneDown();
 
   ADCSRA = 0;                                                           //disable the ADC
@@ -366,10 +368,32 @@ void light_task2(){
     pixels.show();
   }
 }
+
+void led_alive_task(){
+  static uint32_t tick;
+  static char led_status = 0;
+  if (millis() - tick >= 500)
+  {
+    if(led_status){
+      digitalWrite(ledPin, LOW);
+      digitalWrite(ledPin2, HIGH);
+      led_status = 0;
+    }else{
+      digitalWrite(ledPin, HIGH);
+      digitalWrite(ledPin2, LOW);
+      led_status = 1;
+    }
+    // update next time
+    tick = millis();
+  }
+
+
+}
 void loop()
  {
     //turn on ledpin
-    digitalWrite(ledPin, HIGH);
+    //digitalWrite(ledPin, HIGH);
+    // digitalWrite(ledPin2, HIGH);
     if(!powerstatus){
       pixels.setBrightness(0); //brightness
 		  pixels.show();
@@ -380,6 +404,7 @@ void loop()
       // myservo.write(90);  //讓伺服馬達回歸 預備位置 準備下一次的測量
       detection();        //測量角度 並且判斷要往哪一方向移動
       light_task2();
+      led_alive_task();
       if(wakeupflag){
         toneUp();
         wakeupflag = 0;
