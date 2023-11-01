@@ -67,8 +67,8 @@ void setup()
 
   pinMode(pinEnA_Speed,OUTPUT);//定义pinEnA_Speed为输出模式
   pinMode(pinEnB_Speed,OUTPUT);//定义pinEnB_Speed为输出模式
-  analogWrite(pinEnA_Speed,125);//输入模拟值进行设定速度
-  analogWrite(pinEnB_Speed,125);
+  analogWrite(pinEnA_Speed,200);//输入模拟值进行设定速度
+  analogWrite(pinEnB_Speed,200);
 
   pinMode (interruptPin, INPUT_PULLUP);
   pinMode (ledPin, OUTPUT);
